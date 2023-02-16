@@ -110,26 +110,26 @@ if (!function_exists('kboard_wmc_sort_by_name')) {
 if (!function_exists('kboard_wmc_get_custom_fields')) {
   // 검색시 이 필드들이 query에 들어가도록 한다
   function kboard_wmc_get_custom_fields() {
-    return $custom_fields = [
-        'english_name',
-        'position',
-        'gender',
-        'contact_mobile',
-        'contact_tel',
-        'contact_fax',
-        'contact_email',
-        'sns',
-        'home_address',
-        'family_matters',
-        'church_name',
-        'account_number'
+    return [
+      'english_name',
+      'position',
+      'gender',
+      'contact_mobile',
+      'contact_tel',
+      'contact_fax',
+      'contact_email',
+      'sns',
+      'home_address',
+      'family_matters',
+      'church_name',
+      'account_number',
     ];
   }
 }
 
 // 검색 옵션에 위의 커스텀 필드들을 넣는다
 if (!function_exists('kboard_wmc_kboard_list_search_option')) {
-  add_filter('kboard_list_search_option', 'kboard_wmc_kboard_list_search_option', 1, 3);
+  add_filter('kboard_list_search_option', 'kboard_wmc_kboard_list_search_option', 100, 3);
   function kboard_wmc_kboard_list_search_option($search_option, $board_id, $obj) {
     if (!isset($_REQUEST['keyword'])) return $search_option;
     if (empty($_REQUEST['keyword'])) return $search_option;
@@ -156,7 +156,7 @@ if (!function_exists('kboard_wmc_kboard_list_search_option')) {
 
 // 커스텀 필드를 바탕으로 생성된 수많은 INNER_JOIN을 하나로 바꿔준다
 if (!function_exists('kboard_wmc_list_from')) {
-  add_filter('kboard_list_from', 'kboard_wmc_list_from', 1, 3);
+  add_filter('kboard_list_from', 'kboard_wmc_list_from', 100, 3);
   function kboard_wmc_list_from($from_str, $board_id, $obj){
     global $wpdb;
     if (!isset($_REQUEST['keyword'])) return $from_str;
@@ -171,7 +171,7 @@ if (!function_exists('kboard_wmc_list_from')) {
 // 1. 검색어와 옵션검색을 AND로 연결하는데, 이것을 OR로 바꿔준다
 // 2. from 구문에서 INNER_JOIN을 하나 빼고 삭제했기 때문에, 커스텀 필드용 INNER_JOIN을 삭제하고 정식 INNER_JOIN 하나만 남겨놓는다
 if (!function_exists('kboard_wmc_list_where')) {
-  add_filter('kboard_list_where', 'kboard_wmc_list_where', 1, 3);
+  add_filter('kboard_list_where', 'kboard_wmc_list_where', 100, 3);
   function kboard_wmc_list_where($query_str_where, $board_id, $obj) {
     global $wpdb;
 
@@ -181,19 +181,24 @@ if (!function_exists('kboard_wmc_list_where')) {
     $keyword = $_REQUEST['keyword'];
     $prefix = $wpdb->prefix;
 
-    $query = "`wmcattendeelist_kboard_board_content`.`board_id`='{$board_id}'";
+    $query = "`{$prefix}kboard_board_content`.`board_id`='{$board_id}'";
 
     // 카테고리도 반영해주자
-    if (isset($_REQUEST['category1']) && !empty($_REQUEST['category1'])) {
-      $category1 = $_REQUEST['category1'];
-      $category1 = esc_sql($category1);
-			$query = $query . " AND `{$prefix}kboard_board_content`.`category1`='{$category1}'";
-    }
+    // 카테고리는 반영하지 않는다
+    // if (isset($_REQUEST['tree_category_1']) && !empty($_REQUEST['tree_category_1']) && isset($_REQUEST['tree_category_2']) && !empty($_REQUEST['tree_category_2'])) {
+    //   $category1 = $_REQUEST['tree_category_1'];
+    //   $category2 = $_REQUEST['tree_category_2'];
+    //   $query = $query . " AND ( (`{$prefix}kboard_board_option`.`option_key` = 'tree_category_1' AND {$prefix}kboard_board_option`.`option_value` = '{$category1}') AND (`{$prefix}kboard_board_option`.`option_key` = 'tree_category_2' AND {$prefix}kboard_board_option`.`option_value` = '{$category2}')) ";
+    // }
 
+    // member_display는 이름
+    // title은 참석자
+     // content는 기도제목
     $query = $query . "
       AND (
         (
-          `{$prefix}kboard_board_content`.`title` LIKE '%{$keyword}%' 
+          `{$prefix}kboard_board_content`.`member_display` LIKE '%{$keyword}%'
+          OR `{$prefix}kboard_board_content`.`title` LIKE '%{$keyword}%'
           OR `{$prefix}kboard_board_content`.`content` LIKE '%{$keyword}%'
         )
     ";
@@ -289,6 +294,28 @@ if (!function_exists('kboard_wmc_list_rpp')) {
   }  
 }
 
+// 카테고리 검색 오류 수정
+add_filter('kboard_list_where', 'kboard_wmc_tree_category_where', 101, 3);
+function kboard_wmc_tree_category_where($query_str_where, $board_id, $obj) {
+  $_search_option = kboard_search_option();
+  
+  if (isset($_search_option['tree_category_1'])) {
+    $cat1 = $_search_option['tree_category_1']['value'];
+    if ($cat1) {
+      $query_str_where .= " AND (`option_tree_category_1`.`option_key` = 'tree_category_1' AND `option_tree_category_1`.`option_value` = '{$cat1}') ";
+    }
+  }
+
+  if (isset($_search_option['tree_category_2'])) {
+    $cat2 = $_search_option['tree_category_2']['value'];
+    if ($cat2) {
+      $query_str_where .= " AND (`option_tree_category_2`.`option_key` = 'tree_category_2' AND `option_tree_category_2`.`option_value` = '{$cat2}') ";
+    }
+  }
+
+  return $query_str_where;
+}
+
 // 검색 고도화 하기 - 끝
 
 
@@ -329,7 +356,6 @@ if (!function_exists('kboard_wmc_get_list_count_by_category')) {
     return number_format($board->getCategoryCount(array('category1' => $category1)));
   }
 }
-
 
 if (!function_exists('kboard_wmc_download_xlsx')) {
   add_action('init', 'kboard_wmc_download_xlsx');
@@ -585,3 +611,98 @@ if (!function_exists('kboard_wmc_document_print')) {
   }
 }
 
+function kboard_wmc_get_statistics($board) {
+  global $wpdb;
+
+  if (!$board) return [];
+  if (!($board instanceof KBoard)) {
+    return [];
+  }
+
+  $missionary_training_camp_meta_key = 'missionary_training_camp';
+  $registration_meta_key = 'registration';
+
+  $fields = $board->fields();
+  $missionary_training_options = array_reduce(array_values($fields->skin_fields[$missionary_training_camp_meta_key]['row']), function($acc, $cur) {
+    $acc[$cur['label']] = 0;
+    return $acc;
+  }, []);
+  $registration_options = array_reduce(array_values($fields->skin_fields[$registration_meta_key]['row']), function($acc, $cur) {
+    $acc[$cur['label']] = 0;
+    return $acc;
+  }, []);
+
+  $missionary_training_camp_sql = "SELECT content_uid, option_value FROM {$wpdb->prefix}kboard_board_option WHERE option_key = '{$missionary_training_camp_meta_key}'";
+  $registration_sql = "SELECT content_uid, option_value FROM {$wpdb->prefix}kboard_board_option WHERE option_key = '{$registration_meta_key}'";
+
+  $missionary_training_camp_query_results = $wpdb->get_results($missionary_training_camp_sql);
+  $registration_query_results = $wpdb->get_results($registration_sql);
+
+  foreach($missionary_training_camp_query_results as $row) {
+    $option_value = $row->option_value;
+    $missionary_training_options[$option_value] += 1;
+  }
+
+  foreach($registration_query_results as $row) {
+    $option_value = $row->option_value;
+    $registration_options[$option_value] += 1;
+  }
+
+  ob_start(); ?>
+
+  <div class="statistics">
+    <div>
+      <b>선교사합숙</b>
+      <ul> <?php 
+        foreach($missionary_training_options as $option => $count) { ?>
+          <li>
+            <span><?php echo $option; ?></span>
+            <span><?php echo $count; ?></span>
+          </li> <?php
+        } ?>
+      </ul>
+    </div>
+    <div>
+      <b>대회등록</b>
+      <ul> <?php 
+        foreach($registration_options as $option => $count) { ?>
+          <li>
+            <span><?php echo $option; ?></span>
+            <span><?php echo $count; ?></span>
+          </li> <?php
+        } ?>
+      </ul>
+    </div>
+  </div> <?php
+
+  return ob_get_clean(); ?>
+  <?php
+}
+
+function kboard_wmc_get_tree_category_count($board_id, $depth, $category) {
+  global $wpdb;
+  if ($depth !== 1 && $depth !== 2) return 0;
+	
+	$board_id = intval($board_id);
+  $sql = "SELECT COUNT(*) FROM `{$wpdb->prefix}kboard_board_option` WHERE (option_key = 'tree_category_{$depth}' AND option_value = '{$category}');";
+  $count = $wpdb->get_var($sql);
+	return $count;
+}
+
+// 내가 쓴글
+// add_filter('kboard_list_where', 'kboard_wmc_my_list_where', 99, 3);
+function kboard_wmc_my_list_where($query_str_where, $board_id, $obj) {
+  global $wpdb;
+  if (!isset($_GET['show_only_my_list']) || empty($_GET['show_only_my_list'])) return $query_str_where;
+  if (isset($_GET['kboard_search_option']) && !empty($_GET['kboard_search_option'])) return $query_str_where;
+  if (isset($_GET['keyword']) && !empty($_GET['keyword'])) return $query_str_where;
+
+  $query = $query_str_where;
+
+  if (is_user_logged_in()) {
+    $user_id = get_current_user_id();
+    $query .= " AND `{$wpdb->prefix}kboard_board_content`.`member_uid` = {$user_id} ";
+  }
+
+  return $query;
+}

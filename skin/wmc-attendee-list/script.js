@@ -83,49 +83,36 @@ function kboard_toggle_password_field(checkbox) {
 (($) => {
   // 이미 있으면 새로 추가하지 않는다
   // 수정 페이지라는 의미
-  if ($("img#preview").length > 0) return;
 
-  const $input = $("input[name=kboard_attach_portrait]");
-  const $container = $input.closest("div");
-  const $image = $("<img>", {
-    src: "/wp-content/plugins/kboard/skin/wmc-attendee-list/noimg.jpg",
-    class: "preview_img",
-    id: "preview",
-  });
-  $container.prepend($image);
-  $input.change(() => {
-    const input = $input[0];
-    if (input.files && input.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        $($container.find("#preview")).attr("src", e.target.result);
-      };
-      reader.readAsDataURL(input.files[0]);
-    }
-  });
-})(jQuery);
+  function imagePreviewer(meta_key, previewSrc) {
+    const id = `preview_${meta_key}`;
+    if ($(`#${id}`).length > 0) return;
 
-(($) => {
-  // 이미 있으면 새로 추가하지 않는다
-  // 수정 페이지라는 의미
-  if ($("img#familyphoto").length > 0) return;
-
-  const $input = $("input[name=kboard_attach_family_photo]");
-  const $container = $input.closest("div");
-  const $image = $("<img>", {
-    src: "/wp-content/plugins/kboard/skin/wmc-attendee-list/familyphoto_noimg.jpg",
-    class: "preview_img",
-    id: "familyphoto",
-  });
-  $container.prepend($image);
-  $input.change(() => {
-    const input = $input[0];
-    if (input.files && input.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        $($container.find("#familyphoto")).attr("src", e.target.result);
-      };
-      reader.readAsDataURL(input.files[0]);
-    }
-  });
+    const $input = $(`input[name=kboard_attach_${meta_key}]`);
+    const $container = $input.closest("div");
+    const $image = $("<img>", {
+      src: previewSrc,
+      class: "preview_img",
+      id,
+    });
+    $container.prepend($image);
+    $input.change(() => {
+      const input = $input[0];
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          $($container.find(`#${id}`)).attr("src", e.target.result);
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    });
+  }
+  imagePreviewer(
+    "portrait",
+    "/wp-content/plugins/kboard/skin/wmc-attendee-list/noimg.jpg"
+  );
+  imagePreviewer(
+    "family_photo",
+    "/wp-content/plugins/kboard/skin/wmc-attendee-list/familyphoto_noimg.jpg"
+  );
 })(jQuery);

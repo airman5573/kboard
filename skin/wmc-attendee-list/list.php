@@ -46,6 +46,10 @@ else: ?>
 	}
 	?>
 	<!-- 카테고리 끝 -->	
+
+  <!-- 통계 시작 -->
+  <?php echo kboard_wmc_get_statistics($board); ?>
+  <!-- 통계 끝 -->
 	
 	<!-- 리스트 정렬 시작 -->
 	<div class="kboard-count-sort">
@@ -76,7 +80,10 @@ else: ?>
           <option value="200"<?php if($list->getRpp() === 200):?> selected<?php endif?>>200개</option>
           <option value="500"<?php if($list->getRpp() === 500):?> selected<?php endif?>>500개</option>
 				</select>
-			</form>
+			</form> <?php
+        if (is_user_logged_in()) { ?>
+          <a id="show-only-my-list-link" href="/wmc-sponsorship/?show_only_my_list=true">내가 쓴 글 보기</a> <?php
+        } ?>
 		</div>
 	</div>
 	<!-- 리스트 정렬 끝 -->
@@ -144,5 +151,5 @@ else: ?>
 		<?php endif?>
 	</div>
 </div>
-<?php wp_enqueue_script('kboard-wmc-attendee-list-list', "{$skin_path}/list.js", array(), KBOARD_wmc_clothing_menber_VERSION, true)?>
+<?php wp_enqueue_script('kboard-wmc-attendee-list-list', "{$skin_path}/list.js", array(), '0.0.1', true)?>
 <?php endif?>

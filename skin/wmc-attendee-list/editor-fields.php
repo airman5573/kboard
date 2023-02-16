@@ -17,9 +17,21 @@
 	</div>
 <?php elseif($field['field_type'] == 'author'):?>
 	<?php if($field['permission'] == 'always_visible' || (!$field['permission'] && $board->viewUsernameField())):?>
+  <?php
+    $member_display = $content->row->member_display ? esc_attr($content->row->member_display) : '';
+
+    // 로그인 했다면, 해당 사용자의 이름을 입력한다
+    $current_user = wp_get_current_user();
+    $isAdmin = current_user_can('manage_options');
+    if (isset($current_user) && !$isAdmin) {
+      $member_display = $current_user->user_firstname;
+    }
+  ?>
+
+
 		<div class="kboard-attr-row <?php echo esc_attr($field['class'])?> required">
 			<label class="attr-name" for="kboard-input-member-display"><span class="field-name"><?php echo esc_html($field_name)?></span> <span class="attr-required-text">*</span></label>
-			<div class="attr-value"><input type="text" id="kboard-input-member-display" name="member_display" class="required" value="<?php echo $content->member_display?esc_attr($content->member_display):esc_attr($default_value)?>"<?php if($placeholder):?> placeholder="<?php echo esc_attr($placeholder)?>"<?php endif?>></div>
+			<div class="attr-value"><input type="text" id="kboard-input-member-display" name="member_display" class="required" value="<?php echo $member_display; ?>"<?php if($placeholder):?> placeholder="<?php echo esc_attr($placeholder)?>"<?php endif?>></div>
 		</div>
 	<?php elseif($field['permission'] == 'always_hide'):?>
 		<input type="hidden" id="kboard-input-member-display" name="member_display" value="<?php echo $content->member_display?esc_attr($content->member_display):esc_attr($default_value)?>">
@@ -183,7 +195,19 @@
 	<div class="kboard-attr-row <?php echo esc_attr($field['class'])?> meta-key-<?php echo esc_attr($meta_key)?> <?php echo esc_attr($required)?>">
 		<label class="attr-name" for="<?php echo esc_attr($meta_key)?>"><span class="field-name"><?php echo esc_html($field_name)?></span><?php if($required):?> <span class="attr-required-text">*</span><?php endif?></label>
 		<div class="attr-value">
-			<input type="text" id="<?php echo esc_attr($meta_key)?>" class="<?php echo esc_attr($required)?>" name="<?php echo esc_attr($fields->getOptionFieldName($meta_key))?>" value="<?php echo $content->option->{$meta_key}?esc_attr($content->option->{$meta_key}):esc_attr($default_value)?>"<?php if($placeholder):?> placeholder="<?php echo esc_attr($placeholder)?>"<?php endif?>>
+      <?php 
+        $field_value = $content->option->{$meta_key}?esc_attr($content->option->{$meta_key}):esc_attr($default_value);
+        if ($meta_key === 'contact_email') {
+          // 로그인 했다면, 해당 사용자의 이름을 입력한다
+          $current_user = wp_get_current_user();
+          $isAdmin = current_user_can('manage_options');
+          if (isset($current_user) && !$isAdmin) {
+            $contact_email = $current_user->user_email;
+            $field_value = $contact_email;
+          }
+        }
+      ?>
+			<input type="text" id="<?php echo esc_attr($meta_key)?>" class="<?php echo esc_attr($required)?>" name="<?php echo esc_attr($fields->getOptionFieldName($meta_key))?>" value="<?php echo $field_value; ?>"<?php if($placeholder):?> placeholder="<?php echo esc_attr($placeholder)?>"<?php endif?>>
 			<?php if(isset($field['description']) && $field['description']):?><div class="description"><?php echo esc_html($field['description'])?></div><?php endif?>
 		</div>
 	</div>
@@ -257,16 +281,18 @@
 <?php elseif($field['field_type'] == 'file'): ?>
 	<div class="kboard-attr-row <?php echo esc_attr($field['class'])?> meta-key-<?php echo esc_attr($meta_key)?>">
 		<label class="attr-name" for="<?php echo esc_attr($meta_key)?>"><span class="field-name"><?php echo esc_html($field_name)?></span></label>
-		<div class="attr-value"> 
-		    <?php if (isset($content->attach->{$meta_key})) { ?>
-                <div class="portrait_img"><img src="<?php echo $content->attach->{$meta_key}[0]; ?>" id="preview" /></div>
-            <?php } ?>
-            <?php if (isset($content->attach->{$meta_key})) { ?>
-                <div class="portrait_img"><img src="<?php echo $content->attach->{$meta_key}[0]; ?>" id="familyphoto" /></div>
-            <?php } ?>
-			<?php if(isset($content->attach->{$meta_key})):?><?php echo $content->attach->{$meta_key}[1]?> - <a href="<?php echo $url->getDeleteURLWithAttach($content->uid, $meta_key)?>" onclick="return confirm('<?php echo __('Are you sure you want to delete?', 'kboard')?>');"><?php echo __('Delete file', 'kboard')?></a><?php endif?>
-				<input type="file" id="kboard-input-<?php echo esc_attr($meta_key)?>" name="kboard_attach_<?php echo esc_attr($meta_key)?>">
-			<?php if(isset($field['description']) && $field['description']):?><div class="description"><?php echo esc_html($field['description'])?></div><?php endif?>
+		<div class="attr-value"> <?php
+    if ($meta_key === 'portrait' && $content->attach->{$meta_key}[0]) { ?>
+      <div class="portrait_img"><img src="<?php echo $content->attach->{$meta_key}[0]; ?>" id="preview_portrait" /></div> <?php
+    } else if ($meta_key === 'family_photo' && $content->attach->{$meta_key}[0]) { ?>
+      <div class="family_photo_img"><img src="<?php echo $content->attach->{$meta_key}[0]; ?>" id="preview_family_photo" /></div> <?php
+    }
+    
+    if ( isset($content->attach->{$meta_key})):?><?php echo $content->attach->{$meta_key}[1]?> - <a href="<?php echo $url->getDeleteURLWithAttach($content->uid, $meta_key)?>" onclick="return confirm('<?php echo __('Are you sure you want to delete?', 'kboard')?>');"><?php echo __('Delete file', 'kboard')?></a> <?php
+    endif ?>
+			<input type="file" id="kboard-input-<?php echo esc_attr($meta_key)?>" name="kboard_attach_<?php echo esc_attr($meta_key)?>"> <?php 
+    if(isset($field['description']) && $field['description']):?><div class="description"><?php echo esc_html($field['description'])?></div><?php
+    endif ?>
 		</div>
 	</div>
 <?php elseif($field['field_type'] == 'wp_editor'):?>

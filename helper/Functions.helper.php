@@ -946,6 +946,7 @@ function kboard_keyword(){
 		$_GET['keyword'] = isset($_GET['keyword'])?sanitize_text_field($_GET['keyword']):'';
 		$keyword = $_GET['keyword'];
 	}
+
 	return apply_filters('kboard_keyword', $keyword);
 }
 
